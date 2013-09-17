@@ -38,16 +38,28 @@ var CodeHint = function() {
 	newCandidates = [].concat(candidates);
 	candidates.forEach(function (expr) {
 	    if (isNumber(expr.value)) {
-		// Numbers: +
+		// Numbers: +, -, *, /
 		candidates.filter(function (e) { return isNumber(e.value); }).forEach(function (expr2) {
 		    newCandidates.push(new Expression(expr.toString + ' + ' + expr2.toString, expr.value + expr2.value));
+		    newCandidates.push(new Expression(expr.toString + ' - ' + expr2.toString, expr.value - expr2.value));
+		    newCandidates.push(new Expression(expr.toString + ' * ' + expr2.toString, expr.value * expr2.value));
+		    if (expr2.value !== 0)
+			newCandidates.push(new Expression(expr.toString + ' / ' + expr2.toString, expr.value / expr2.value));
 		});
 	    } else if (isArray(expr.value)) {
-		// Arrays: []
+		// Arrays: [], .length
 		candidates.filter(function (e) { return isNumber(e.value); }).forEach(function (expr2) {
 		    if (expr2.value in expr.value)
 			newCandidates.push(new Expression(expr.toString + '[' + expr2.toString + ']', expr.value[expr2.value]));
 		});
+		newCandidates.push(new Expression(expr.toString + '.length', expr.value.length));
+		// TODO: Do something for array methods: console.log(Object.getOwnPropertyNames(Array.prototype));
+	    } else if (isString(expr.value)) {
+		// Strings:
+		candidates.filter(function (e) { return isString(e.value); }).forEach(function (expr2) {
+		    newCandidates.push(new Expression(expr.toString + ' + ' + expr2.toString, expr.value + expr2.value));
+		});
+		// TODO: Do something for string methods: console.log(Object.getOwnPropertyNames(String.prototype));
 	    } else if (isFunction(expr.value)) {
 		// Functions: call
 		// Get all of the possible arguments of the right length.
