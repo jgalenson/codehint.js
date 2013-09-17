@@ -60,7 +60,12 @@ var CodeHint = function() {
 		}, [[]]);
 		// Call the given function with the just-computed arguments.
 		var calls = allArgs.map(function (args) {
-		    var result = expr.value.apply(null, args.map(function (e) { return e.value; }));
+		    var result;
+		    try {
+			result = expr.value.apply(null, args.map(function (e) { return e.value; }));
+		    } catch (e) {
+			result = NaN;
+		    }
 		    if (isNumber(result) && isNaN(result))  // Ignore NaN results.
 			return null;
 		    else
@@ -105,7 +110,7 @@ function test() {
     var s = "Hello, world.";
     var plus = function(x, y) { return x + y };
     var plusOne = function(x) { return x + 1 };
-    var person = { firstName: "John", lastName: "Doe", age: 42, live: function(x) { this.age += x; return this.age; } };
+    var person = { firstName: "John", lastName: "Doe", age: 42, live: function(x) { if (typeof(x) == 'number') { this.age += x; return this.age; } else throw "Must give a number." } };
     var a = [1, 2, 3];
     CodeHint.synthesize({two: two, s: s, person: person, a: a, /*plus: plus, plusOne: plusOne,*/ n: null, u: undefined}, function (rv) { return typeof rv == 'number'; });
 }
