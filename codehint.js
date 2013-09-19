@@ -1,5 +1,8 @@
 var CodeHint = function() {
 
+    if (isNodeJS())
+	_ = require('./underscore-min');
+
     /**
      * Synthesizes expressions built out of the given seeds that
      * satisfy the given spec (if given).
@@ -16,13 +19,12 @@ var CodeHint = function() {
 	for (x in seeds)
 	    candidates.push(new Expression(x, seeds[x]));
 	// Generate the expressions.
-	var allExprs = range(2).reduce(function (acc) {
+	var allExprs = _.range(2).reduce(function (acc) {
 	    return genOneLevel(acc);
 	}, candidates);
-	console.log(allExprs);
+	//console.log(allExprs);
 	// Filter with the spec.
 	var goodExprs = spec ? allExprs.filter(function (expr) { return spec(expr.value); }) : allExprs;
-	console.log(goodExprs);
 	return goodExprs;
     };
 
@@ -37,34 +39,34 @@ var CodeHint = function() {
     var genOneLevel = function(candidates) {
 	newCandidates = [].concat(candidates);
 	candidates.forEach(function (expr) {
-	    if (isNumber(expr.value)) {
+	    if (_.isNumber(expr.value)) {
 		// Numbers: +, -, *, /
-		candidates.filter(function (e) { return isNumber(e.value); }).forEach(function (expr2) {
+		candidates.filter(function (e) { return _.isNumber(e.value); }).forEach(function (expr2) {
 		    newCandidates.push(new Expression(expr.toString + ' + ' + expr2.toString, expr.value + expr2.value));
 		    newCandidates.push(new Expression(expr.toString + ' - ' + expr2.toString, expr.value - expr2.value));
 		    newCandidates.push(new Expression(expr.toString + ' * ' + expr2.toString, expr.value * expr2.value));
 		    if (expr2.value !== 0)
 			newCandidates.push(new Expression(expr.toString + ' / ' + expr2.toString, expr.value / expr2.value));
 		});
-	    } else if (isArray(expr.value)) {
+	    } else if (_.isArray(expr.value)) {
 		// Arrays: [], .length
-		candidates.filter(function (e) { return isNumber(e.value); }).forEach(function (expr2) {
+		candidates.filter(function (e) { return _.isNumber(e.value); }).forEach(function (expr2) {
 		    if (expr2.value in expr.value)
 			newCandidates.push(new Expression(expr.toString + '[' + expr2.toString + ']', expr.value[expr2.value]));
 		});
 		newCandidates.push(new Expression(expr.toString + '.length', expr.value.length));
 		// TODO: Do something for array methods: console.log(Object.getOwnPropertyNames(Array.prototype));
-	    } else if (isString(expr.value)) {
+	    } else if (_.isString(expr.value)) {
 		// Strings:
-		candidates.filter(function (e) { return isString(e.value); }).forEach(function (expr2) {
+		candidates.filter(function (e) { return _.isString(e.value); }).forEach(function (expr2) {
 		    newCandidates.push(new Expression(expr.toString + ' + ' + expr2.toString, expr.value + expr2.value));
 		});
 		// TODO: Do something for string methods: console.log(Object.getOwnPropertyNames(String.prototype));
-	    } else if (isFunction(expr.value)) {
+	    } else if (_.isFunction(expr.value)) {
 		// Functions: call
 		// Get all of the possible arguments of the right length.
-		var allArgs = range(expr.value.length).reduce(function(acc) {
-		    return [].concat.apply([], acc.map(function (acc) {
+		var allArgs = _.range(expr.value.length).reduce(function(acc) {
+		    return _.flatten(acc.map(function (acc) {
 			return candidates.map(function (cur) {
 			    return acc.concat([cur]);
 			});
@@ -78,16 +80,16 @@ var CodeHint = function() {
 		    } catch (e) {
 			result = NaN;
 		    }
-		    if (isNumber(result) && isNaN(result))  // Ignore NaN results.
+		    if (_.isNumber(result) && _.isNaN(result))  // Ignore NaN results.
 			return null;
 		    else
 			return new Expression(expr.toString + '(' + args.map(function (e) { return e.toString; }).join(', ') + ')', result);
 		}).filter(function (x) { return x != null; });
 		newCandidates.push.apply(newCandidates, calls);
-	    } else if (isObject(expr.value)) {
+	    } else if (_.isObject(expr.value)) {
 		// Objects: dereference
 		for (var field in expr.value)
-		    newCandidates.push(new Expression(expr.toString + '.' + field, isFunction(expr.value[field]) ? expr.value[field].bind(expr.value) : expr.value[field]));
+		    newCandidates.push(new Expression(expr.toString + '.' + field, _.isFunction(expr.value[field]) ? expr.value[field].bind(expr.value) : expr.value[field]));
 	    }
 	});
 	return newCandidates;
@@ -105,14 +107,6 @@ var CodeHint = function() {
 	this.value = value;
     }
 
-    // Helpers
-    var range = function(num) { return (new Array(num)).join().split(','); };
-    var isNumber = function(v) { return typeof v == 'number'; };
-    var isString = function(v) { return typeof v == 'string' || v instanceof String; };
-    var isArray = function(v) { return v instanceof Array; };
-    var isObject = function(v) { return typeof v == 'object'; };
-    var isFunction = function(v) { return typeof v == 'function'; };
-
     return { synthesize: synthesize };
 }()
 
@@ -124,7 +118,14 @@ function test() {
     var plusOne = function(x) { return x + 1 };
     var person = { firstName: "John", lastName: "Doe", age: 42, live: function(x) { if (typeof(x) == 'number') { this.age += x; return this.age; } else throw "Must give a number." } };
     var a = [1, 2, 3];
-    CodeHint.synthesize({two: two, s: s, person: person, a: a, /*plus: plus, plusOne: plusOne,*/ n: null, u: undefined}, function (rv) { return typeof rv == 'number'; });
+    var results = CodeHint.synthesize({two: two, s: s, person: person, a: a, /*plus: plus, plusOne: plusOne,*/ n: null, u: undefined}, function (rv) { return typeof rv == 'number'; });
+    console.log(results);
 }
 
-test();
+// Hacky check to see if we're running in node.js.
+function isNodeJS() {
+    return typeof window == 'undefined';
+}
+
+if (isNodeJS())
+    test();
