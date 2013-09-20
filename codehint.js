@@ -3,6 +3,8 @@ var CodeHint = function() {
     if (isNodeJS())
 	_ = require('./underscore-min');
 
+    //var equivalences = Object.create(null);
+
     /**
      * Synthesizes expressions built out of the given seeds that
      * satisfy the given spec (if given).
@@ -25,6 +27,7 @@ var CodeHint = function() {
 	//console.log(allExprs);
 	// Filter with the spec.
 	var goodExprs = spec ? allExprs.filter(function (expr) { return spec(expr.value); }) : allExprs;
+	//var finalExprs = expandEquivs(goodExprs);
 	return goodExprs;
     };
 
@@ -92,6 +95,14 @@ var CodeHint = function() {
 		    newCandidates.push(new Expression(expr.toString + '.' + field, _.isFunction(expr.value[field]) ? expr.value[field].bind(expr.value) : expr.value[field]));
 	    }
 	});
+	/*newCandidates.forEach(function (expr) {
+	    var equivs = equivalences[expr.value];
+	    if (equivs)
+		equivs.push(expr);
+	    else
+		equivalences[expr.value] = [expr];
+	});
+	var uniqueCandidates = _.map(equivalences, function (value, key) { return value[0]; });*/
 	return newCandidates;
     };
 
