@@ -58,12 +58,12 @@ var CodeHint = function() {
 		// Arrays: [], .length
 		candidates.filter(function (e) { return _.isNumber(e.value); }).forEach(function (expr2) {
 		    if (expr2.value in expr.value)
-			newCandidates.push(new ArrayAccess(expr, expr2));
+			newCandidates.push(new BracketAccess(expr, expr2));
 		});
-		newCandidates.push(new PropertyAccess(expr, 'length'));
+		newCandidates.push(new DotAccess(expr, 'length'));
 		// TODO: Do something for array methods: console.log(Object.getOwnPropertyNames(Array.prototype));
 	    } else if (_.isString(expr.value)) {
-		// Strings:
+		// Strings: +
 		candidates.filter(function (e) { return _.isString(e.value); }).forEach(function (expr2) {
 		    newCandidates.push(new Plus(expr, expr2));
 		});
@@ -95,7 +95,11 @@ var CodeHint = function() {
 	    } else if (_.isObject(expr.value)) {
 		// Objects: dereference
 		for (var field in expr.value)
-		    newCandidates.push(new PropertyAccess(expr, field));
+		    newCandidates.push(new DotAccess(expr, field));
+		// We access string-based properties of objects but only if those properties exist in that object.
+		candidates.filter(function (e) { return e.value in expr.value; }).forEach(function (expr2) {
+		    newCandidates.push(new BracketAccess(expr, expr2));
+		});
 	    }
 	});
 	/*newCandidates.forEach(function (expr) {
@@ -155,19 +159,19 @@ var CodeHint = function() {
     }
     inheritsFrom(Div, BinaryOp);
 
-    function ArrayAccess(array, index) {
-	Expression.call(this, array.str + '[' + index.str + ']', array.value[index.value]);
-	this.array = array;
-	this.index = index;
-    }
-    inheritsFrom(ArrayAccess, Expression);
-
-    function PropertyAccess(obj, name) {
-	Expression.call(this, obj.str + '.' + name, _.isFunction(obj.value[name]) ? obj.value[name].bind(obj.value) : obj.value[name]);
+    function BracketAccess(obj, prop) {
+	Expression.call(this, obj.str + '[' + prop.str + ']', obj.value[prop.value]);
 	this.obj = obj;
-	this.name = name;
+	this.prop = prop;
     }
-    inheritsFrom(PropertyAccess, Expression);
+    inheritsFrom(BracketAccess, Expression);
+
+    function DotAccess(obj, prop) {
+	Expression.call(this, obj.str + '.' + prop, _.isFunction(obj.value[prop]) ? obj.value[prop].bind(obj.value) : obj.value[prop]);
+	this.obj = obj;
+	this.prop = prop;
+    }
+    inheritsFrom(DotAccess, Expression);
 
     function Call(fn, args, value) {
 	Expression.call(this, fn.str + '(' + args.map(function (e) { return e.str; }).join(', ') + ')', value);
@@ -195,7 +199,7 @@ var CodeHint = function() {
 // Simple testing code.
 function test() {
     var two = 2;
-    var s = "Hello, world.";
+    var s = 'age';
     var plus = function(x, y) { if (typeof x !== 'number' || typeof y !== 'number') throw 'Must give a number.'; else return x + y; };
     var person = { firstName: "John", lastName: "Doe", age: 42, live: function(x) { if (typeof(x) == 'number') { this.age += x; return this.age; } else throw 'Must give a number.' } };
     var a = [1, 2, 3];
