@@ -73,7 +73,7 @@ var CodeHint = function() {
 			return candidates.map(function (cur) {
 			    return acc.concat([cur]);
 			});
-		    }));
+		    }), true);
 		}, [[]]);
 		// Call the given function with the just-computed arguments.
 		var calls = allArgs.map(function (args) {
