@@ -21,8 +21,8 @@ var CodeHint = function() {
 	for (x in seeds)
 	    candidates.push(new Literal(x, seeds[x]));
 	// Generate the expressions.
-	var allExprs = _.range(2).reduce(function (acc) {
-	    return genOneLevel(acc);
+	var allExprs = _.range(2).reduce(function (acc, cur) {
+	    return genOneLevel(acc, cur + 1);
 	}, candidates);
 	console.log('Generated ' + allExprs.length + ' exprs.');
 	//console.log(prettyStringOfExprs(allExprs));
@@ -39,10 +39,11 @@ var CodeHint = function() {
      * candidates.
      * @param {Expression[]} candidates The candidate expressions out
      * of which to build the result set of expressions.
+     * @param {number} curDepth The current search depth.
      * @returns {Expression[]} Expressions built out of the given
      * candidates.
      */
-    var genOneLevel = function(candidates) {
+    var genOneLevel = function(candidates, curDepth) {
 	newCandidates = [].concat(candidates);
 	candidates.forEach(function (expr) {
 	    if (_.isNumber(expr.value)) {
@@ -110,7 +111,8 @@ var CodeHint = function() {
 		equivalences[expr.value] = [expr];
 	});
 	var uniqueCandidates = _.map(equivalences, function (value, key) { return value[0]; });*/
-	return newCandidates;
+	newCandidates = newCandidates.filter(function (expr) { return expr.depth == curDepth; });
+	return candidates.concat(newCandidates);
     };
 
     /* Expression AST */
@@ -121,10 +123,12 @@ var CodeHint = function() {
      * @param {string} str The string representation of
      * the expression.
      * @param value The value of the expression.
+     * @param depth {number} The depth of the expression.
      */
-    function Expression(str, value) {
+    function Expression(str, value, depth) {
 	this.str = str;
 	this.value = value;
+	this.depth = depth;
     }
 
     Expression.prototype.toString = function() {
@@ -132,12 +136,12 @@ var CodeHint = function() {
     };
 
     function Literal(str, value) {
-	Expression.call(this, str, value);
+	Expression.call(this, str, value, 0);
     }
     inheritsFrom(Literal, Expression);
 
     function BinaryOp(lhs, op, rhs, value) {
-	Expression.call(this, lhs.str + ' ' + op + ' ' + rhs.str, value);
+	Expression.call(this, lhs.str + ' ' + op + ' ' + rhs.str, value, Math.max(lhs.depth, rhs.depth) + 1);
 	this.lhs = lhs;
 	this.rhs = rhs;
     }
@@ -160,21 +164,21 @@ var CodeHint = function() {
     inheritsFrom(Div, BinaryOp);
 
     function BracketAccess(obj, prop) {
-	Expression.call(this, obj.str + '[' + prop.str + ']', obj.value[prop.value]);
+	Expression.call(this, obj.str + '[' + prop.str + ']', bindIfFunction(obj.value[prop.value], obj), Math.max(obj.depth, prop.depth) + 1);
 	this.obj = obj;
 	this.prop = prop;
     }
     inheritsFrom(BracketAccess, Expression);
 
     function DotAccess(obj, prop) {
-	Expression.call(this, obj.str + '.' + prop, _.isFunction(obj.value[prop]) ? obj.value[prop].bind(obj.value) : obj.value[prop]);
+	Expression.call(this, obj.str + '.' + prop, bindIfFunction(obj.value[prop], obj), obj.depth + 1);
 	this.obj = obj;
 	this.prop = prop;
     }
     inheritsFrom(DotAccess, Expression);
 
     function Call(fn, args, value) {
-	Expression.call(this, fn.str + '(' + args.map(function (e) { return e.str; }).join(', ') + ')', value);
+	Expression.call(this, fn.str + '(' + args.map(function (e) { return e.str; }).join(', ') + ')', value, Math.max.apply(null, [fn].concat(args).map(function (e) { return e.depth; })) + 1);
 	this.fn = fn;
 	this.args = args;
     }
@@ -193,15 +197,19 @@ var CodeHint = function() {
 	}, '');
     }
 
+    function bindIfFunction(val, obj) {
+	return _.isFunction(val) ? val.bind(obj.value) : val;
+    }
+
     return { synthesize: synthesize };
-}()
+}();
 
 // Simple testing code.
 function test() {
     var two = 2;
-    var s = 'age';
+    var s = 'live';
     var plus = function(x, y) { if (typeof x !== 'number' || typeof y !== 'number') throw 'Must give a number.'; else return x + y; };
-    var person = { firstName: "John", lastName: "Doe", age: 42, live: function(x) { if (typeof(x) == 'number') { this.age += x; return this.age; } else throw 'Must give a number.' } };
+    var person = { firstName: "John", lastName: "Doe", age: 42, live: function(x) { if (typeof(x) == 'number') { this.age += x; return this.age; } else throw 'Must give a number.' }, answer: function () { return 42; } };
     var a = [1, 2, 3];
     var results = CodeHint.synthesize({two: two, s: s, person: person, a: a, plus: plus, n: null, u: undefined}, function (rv) { return typeof rv == 'number'; });
 }
