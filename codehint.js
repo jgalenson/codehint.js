@@ -214,7 +214,7 @@ var CodeHint = function() {
     inheritsFrom(Literal, Expression);
 
     function BinaryOp(lhs, op, rhs, value) {
-	Expression.call(this, lhs.str + ' ' + op + ' ' + rhs.str, value, Math.max(lhs.depth, rhs.depth) + 1);
+	Expression.call(this, parenIfNeeded(lhs) + ' ' + op + ' ' + parenIfNeeded(rhs), value, Math.max(lhs.depth, rhs.depth) + 1);
 	this.lhs = lhs;
 	this.rhs = rhs;
 	this.op = op;
@@ -255,6 +255,20 @@ var CodeHint = function() {
 	this.args = args;
     }
     inheritsFrom(Call, Expression);
+
+    /**
+     * Returns the string representation of the given expression
+     * with parents if it is a binary operation.
+     * @param {Expression} expr The expression.
+     * @returns {string} The string of the given expression with
+     * parens if it is a binary operation.
+     */
+    function parenIfNeeded(expr) {
+	if (expr instanceof BinaryOp)
+	    return '(' + expr.str + ')';
+	else
+	    return expr.str;
+    }
 
     /* Utilities */
 
