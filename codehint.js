@@ -49,11 +49,11 @@ var CodeHint = function() {
 	    if (_.isNumber(expr.value)) {
 		// Numbers: +, -, *, /
 		candidates.filter(function (e) { return _.isNumber(e.value); }).forEach(function (expr2) {
-		    newCandidates.push(new Plus(expr, expr2));
-		    newCandidates.push(new Minus(expr, expr2));
-		    newCandidates.push(new Times(expr, expr2));
+		    newCandidates.push(new BinaryOp(expr, '+', expr2, expr.value + expr2.value));
+		    newCandidates.push(new BinaryOp(expr, '-', expr2, expr.value - expr2.value));
+		    newCandidates.push(new BinaryOp(expr, '*', expr2, expr.value * expr2.value));
 		    if (expr2.value !== 0)
-			newCandidates.push(new Div(expr, expr2));
+			newCandidates.push(new BinaryOp(expr, '/', expr2, expr.value / expr2.value));
 		});
 	    } else if (_.isArray(expr.value)) {
 		// Arrays: [], .length
@@ -66,7 +66,7 @@ var CodeHint = function() {
 	    } else if (_.isString(expr.value)) {
 		// Strings: +
 		candidates.filter(function (e) { return _.isString(e.value); }).forEach(function (expr2) {
-		    newCandidates.push(new Plus(expr, expr2));
+		    newCandidates.push(new BinaryOp(expr, '+', expr2, expr.value + expr2.value));
 		});
 		// TODO: Do something for string methods: console.log(Object.getOwnPropertyNames(String.prototype));
 	    } else if (_.isFunction(expr.value)) {
@@ -144,24 +144,9 @@ var CodeHint = function() {
 	Expression.call(this, lhs.str + ' ' + op + ' ' + rhs.str, value, Math.max(lhs.depth, rhs.depth) + 1);
 	this.lhs = lhs;
 	this.rhs = rhs;
+	this.op = op;
     }
     inheritsFrom(BinaryOp, Expression);
-    function Plus(left, right) {
-	BinaryOp.call(this, left, '+', right, left.value + right.value);
-    }
-    inheritsFrom(Plus, BinaryOp);
-    function Minus(left, right) {
-	BinaryOp.call(this, left, '-', right, left.value - right.value);
-    }
-    inheritsFrom(Minus, BinaryOp);
-    function Times(left, right) {
-	BinaryOp.call(this, left, '*', right, left.value * right.value);
-    }
-    inheritsFrom(Times, BinaryOp);
-    function Div(left, right) {
-	BinaryOp.call(this, left, '/', right, left.value / right.value);
-    }
-    inheritsFrom(Div, BinaryOp);
 
     function BracketAccess(obj, prop) {
 	Expression.call(this, obj.str + '[' + prop.str + ']', bindIfFunction(obj.value[prop.value], obj), Math.max(obj.depth, prop.depth) + 1);
