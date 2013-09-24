@@ -54,10 +54,13 @@ var CodeHint = function() {
 	    if (_.isNumber(expr.value)) {
 		// Numbers: +, -, *, /
 		candidates.filter(function (e) { return _.isNumber(e.value); }).forEach(function (expr2) {
-		    newCandidates.push(new BinaryOp(expr, '+', expr2, expr.value + expr2.value));
-		    newCandidates.push(new BinaryOp(expr, '-', expr2, expr.value - expr2.value));
-		    newCandidates.push(new BinaryOp(expr, '*', expr2, expr.value * expr2.value));
-		    if (expr2.value !== 0)
+		    if (isUsefulInfix(expr, '+', expr2))
+			newCandidates.push(new BinaryOp(expr, '+', expr2, expr.value + expr2.value));
+		    if (isUsefulInfix(expr, '-', expr2))
+			newCandidates.push(new BinaryOp(expr, '-', expr2, expr.value - expr2.value));
+		    if (isUsefulInfix(expr, '*', expr2))
+			newCandidates.push(new BinaryOp(expr, '*', expr2, expr.value * expr2.value));
+		    if (isUsefulInfix(expr, '/', expr2) && expr2.value !== 0)
 			newCandidates.push(new BinaryOp(expr, '/', expr2, expr.value / expr2.value));
 		});
 	    } else if (_.isArray(expr.value)) {
@@ -158,7 +161,8 @@ var CodeHint = function() {
 		;
 	    else if (expr instanceof BinaryOp)
 		pushAll(newEquivs, pairs(expandRec(expr.lhs), expandRec(expr.rhs)).map(function (cur) {
-		    return new BinaryOp(cur[0], expr.op, cur[1], expr.value);
+		    var swap = !isUsefulInfix(cur[0], expr.op, cur[1]);  // If this infix is not useful, swap it.  This should not get duplicates because we do not generate useless infixes initially.
+		    return new BinaryOp(swap ? cur[1] : cur[0], expr.op, swap ? cur[0] : cur[1], expr.value);
 		}));
 	    else if (expr instanceof BracketAccess)
 		pushAll(newEquivs, pairs(expandRec(expr.obj), expandRec(expr.prop)).map(function (cur) {
@@ -182,6 +186,28 @@ var CodeHint = function() {
 	    return curEquivs;
 	}
 	return _.flatten(_.map(exprs, expandRec), true);
+    }
+
+    /**
+     * Ensures that the given infix operation is useful with respect
+     * to our heuristics that remove uninteresting expressions like
+     * x+x or y+x (given that we have x+y).
+     * @param {Expression} lhs The left side.
+     * @param {string} op The operation.
+     * @param {Expression} rhs The right side.
+     * @returns {boolean} Whether or not the given infix expression is useful.
+     */
+    function isUsefulInfix(lhs, op, rhs) {
+	if (op === '+')
+	    return (_.isString(lhs.value) || _.isString(rhs.value)) ? true : lhs.str < rhs.str;
+	if (op === '-')
+	    return lhs.str !== rhs.str;
+	if (op === '*')
+	    return lhs.str <= rhs.str;
+	if (op === '/')
+	    return lhs.str != rhs.str;
+	else
+	    throw 'Unknown operator ' + op;
     }
 
     /* Expression AST */
