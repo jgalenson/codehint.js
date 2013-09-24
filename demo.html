@@ -13,24 +13,26 @@
     Input:<br/>
     <textarea id='input' cols=120 rows=30>
 var two = 2;
-var s = "Hello, world.";
-var plus = function(x, y) { return x + y };
+var s = 'live';
+var plus = function(x, y) { if (typeof x !== 'number' || typeof y !== 'number') throw 'Must give a number.'; else return x + y; };
 var plusOne = function(x) { return x + 1 };
 var person = { firstName: "John",
-               lastName: "Doe", age: 42,
+               lastName: "Doe",
+               age: 42,
                live: function(x) {
                  if (typeof(x) == 'number') {
                    this.age += x;
                    return this.age;
                  } else
                    throw "Must give a number.";
-                 }
+                 },
+               answer: function () { return 42; }
              };
 var a = [1, 2, 3];
 
 var spec = function (rv) { return typeof rv == 'number'; };
 
-CodeHint.synthesize({two: two, s: s, person: person, a: a, /*plus: plus, plusOne: plusOne,*/ n: null, u: undefined}, spec);
+CodeHint.synthesize({two: two, s: s, person: person, a: a, plus: plus, n: null, u: undefined}, spec);
     </textarea><br/>
     Output:<br/>
     <textarea id='output' cols=120 rows=30>
@@ -48,7 +50,7 @@ CodeHint.synthesize({two: two, s: s, person: person, a: a, /*plus: plus, plusOne
 
       function prettyPrintResult(result) {
         return result.reduce(function (acc, expr) {
-          return acc + (acc.length == 0 ? '' : '\n') + '\'' + expr.toString + '\' has value ' + expr.value;
+          return acc + (acc.length == 0 ? '' : '\n') + '\'' + expr.str + '\' has value ' + expr.value;
         }, '');
       }
     </script>
