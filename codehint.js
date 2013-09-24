@@ -52,7 +52,7 @@ var CodeHint = function() {
 	newCandidates = [].concat(candidates);
 	candidates.forEach(function (expr) {
 	    if (_.isNumber(expr.value)) {
-		// Numbers: +, -, *, /
+		// Numbers: +, -, *, /, unary negation
 		candidates.filter(function (e) { return _.isNumber(e.value); }).forEach(function (expr2) {
 		    if (isUsefulInfix(expr, '+', expr2))
 			newCandidates.push(new BinaryOp(expr, '+', expr2, expr.value + expr2.value));
@@ -63,6 +63,8 @@ var CodeHint = function() {
 		    if (isUsefulInfix(expr, '/', expr2) && expr2.value !== 0)
 			newCandidates.push(new BinaryOp(expr, '/', expr2, expr.value / expr2.value));
 		});
+		if (isUsefulPrefix('-', expr))
+		    newCandidates.push(new UnaryOp('-', expr, -expr.value));
 	    } else if (_.isArray(expr.value)) {
 		// Arrays: [], .length
 		candidates.filter(function (e) { return _.isNumber(e.value); }).forEach(function (expr2) {
@@ -164,6 +166,10 @@ var CodeHint = function() {
 		    var swap = !isUsefulInfix(cur[0], expr.op, cur[1]);  // If this infix is not useful, swap it.  This should not get duplicates because we do not generate useless infixes initially.
 		    return new BinaryOp(swap ? cur[1] : cur[0], expr.op, swap ? cur[0] : cur[1], expr.value);
 		}));
+	    else if (expr instanceof UnaryOp)
+		pushAll(newEquivs, expandRec(expr.expr).map(function (cur) {
+		    return new UnaryOp(expr.op, cur, expr.value);
+		}));
 	    else if (expr instanceof BracketAccess)
 		pushAll(newEquivs, pairs(expandRec(expr.obj), expandRec(expr.prop)).map(function (cur) {
 		    return new BracketAccess(cur[0], cur[1], expr.value);
@@ -178,7 +184,7 @@ var CodeHint = function() {
 		    pushAll(newEquivs, makeCalls(fn, candidateArgs, expr.value));
 		});
 	    } else
-		throw "Illegal type";
+		throw 'Illegal type for ' + expr.str;
 	    newEquivs = newEquivs.filter(function (expr) { return expr.depth <= MAX_DEPTH; });
 	    pushAll(curEquivs, newEquivs);
 	    curEquivs = removeDuplicates(curEquivs);
@@ -199,13 +205,36 @@ var CodeHint = function() {
      */
     function isUsefulInfix(lhs, op, rhs) {
 	if (op === '+')
-	    return (_.isString(lhs.value) || _.isString(rhs.value)) ? true : lhs.str < rhs.str;
+	    return (_.isString(lhs.value) || _.isString(rhs.value)) ? true : lhs.str < rhs.str && !(lhs instanceof UnaryOp) && !(rhs instanceof UnaryOp);
 	if (op === '-')
-	    return lhs.str !== rhs.str;
+	    return lhs.str !== rhs.str && !(rhs instanceof UnaryOp) && !firstIsUnaryOfSecond(lhs, rhs);
 	if (op === '*')
-	    return lhs.str <= rhs.str;
+	    return lhs.str <= rhs.str && !firstIsUnaryOfSecond(lhs, rhs) && !firstIsUnaryOfSecond(rhs, lhs);
 	if (op === '/')
-	    return lhs.str != rhs.str;
+	    return lhs.str != rhs.str && !firstIsUnaryOfSecond(lhs, rhs) && !firstIsUnaryOfSecond(rhs, lhs);
+	else
+	    throw 'Unknown operator ' + op;
+    }
+
+    /**
+     * Checks whether the first expression is a unary operation
+     * on the second.  E.g., -x and x.
+     */
+    function firstIsUnaryOfSecond(first, second) {
+	return first instanceof UnaryOp && first.expr.str == second.str;
+    }
+
+    /**
+     * Ensures that the given prefix operation is useful with respect
+     * to our heuristics that remove uninteresting expressions like
+     * --x
+     * @param {string} op The operation.
+     * @param {Expression} expr The expression.
+     * @returns {boolean} Whether or not the given prefix expression is useful.
+     */
+    function isUsefulPrefix(op, expr) {
+	if (op === '-')
+	    return !(expr instanceof BinaryOp) && !(expr instanceof UnaryOp);
 	else
 	    throw 'Unknown operator ' + op;
     }
@@ -247,6 +276,13 @@ var CodeHint = function() {
     }
     inheritsFrom(BinaryOp, Expression);
 
+    function UnaryOp(op, expr, value) {
+	Expression.call(this, op + parenIfNeeded(expr), value, expr.depth + 1);
+	this.op = op;
+	this.expr = expr;
+    }
+    inheritsFrom(UnaryOp, Expression);
+
     /**
      * Represents a bracket expression such as e[f].
      * @param {Expression} obj The object on the left.
@@ -284,13 +320,13 @@ var CodeHint = function() {
 
     /**
      * Returns the string representation of the given expression
-     * with parents if it is a binary operation.
+     * with parents if it is a unary or binary operation.
      * @param {Expression} expr The expression.
      * @returns {string} The string of the given expression with
-     * parens if it is a binary operation.
+     * parens if it is a unary or binary operation.
      */
     function parenIfNeeded(expr) {
-	if (expr instanceof BinaryOp)
+	if (expr instanceof BinaryOp || expr instanceof UnaryOp)
 	    return '(' + expr.str + ')';
 	else
 	    return expr.str;
