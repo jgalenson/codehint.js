@@ -2,6 +2,11 @@ var CodeHint = function() {
 
     var MAX_DEPTH = 2;
 
+    // Hacky check to see if we're running in node.js.
+    function isNodeJS() {
+	return typeof window == 'undefined';
+    }
+    
     if (isNodeJS())
 	_ = require('./underscore-min');
 
@@ -209,7 +214,7 @@ var CodeHint = function() {
 	if (op === '-')
 	    return lhs.str !== rhs.str && !(rhs instanceof UnaryOp) && !firstIsUnaryOfSecond(lhs, rhs);
 	if (op === '*')
-	    return lhs.str <= rhs.str && !firstIsUnaryOfSecond(lhs, rhs) && !firstIsUnaryOfSecond(rhs, lhs);
+	    return lhs.str <= rhs.str && !firstIsUnaryOfSecond(lhs, rhs) && !firstIsUnaryOfSecond(rhs, lhs) && !(lhs instanceof UnaryOp && rhs instanceof UnaryOp && lhs.expr.str === rhs.expr.str);
 	if (op === '/')
 	    return lhs.str != rhs.str && !firstIsUnaryOfSecond(lhs, rhs) && !firstIsUnaryOfSecond(rhs, lhs);
 	else
@@ -221,7 +226,7 @@ var CodeHint = function() {
      * on the second.  E.g., -x and x.
      */
     function firstIsUnaryOfSecond(first, second) {
-	return first instanceof UnaryOp && first.expr.str == second.str;
+	return first instanceof UnaryOp && first.expr.str === second.str;
     }
 
     /**
@@ -427,20 +432,3 @@ var CodeHint = function() {
     return { synthesize: synthesize };
 }();
 
-// Simple testing code.
-function test() {
-    var two = 2;
-    var s = 'live';
-    var plus = function(x, y) { if (typeof x !== 'number' || typeof y !== 'number') throw 'Must give a number.'; else return x + y; };
-    var person = { firstName: "John", lastName: "Doe", age: 42, live: function(x) { if (typeof(x) == 'number') { this.age += x; return this.age; } else throw 'Must give a number.' }, answer: function () { return 42; } };
-    var a = [1, 2, 3];
-    var results = CodeHint.synthesize({two: two, s: s, person: person, a: a, plus: plus, n: null, u: undefined}, function (rv) { return typeof rv == 'number'; });
-}
-
-// Hacky check to see if we're running in node.js.
-function isNodeJS() {
-    return typeof window == 'undefined';
-}
-
-if (isNodeJS())
-    test();
