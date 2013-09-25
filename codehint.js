@@ -79,10 +79,11 @@ var CodeHint = function() {
 		newCandidates.push(new DotAccess(expr, 'length'));
 		// TODO: Do something for array methods: console.log(Object.getOwnPropertyNames(Array.prototype));
 	    } else if (_.isString(expr.value)) {
-		// Strings: +
+		// Strings: +, length
 		candidates.filter(function (e) { return _.isString(e.value); }).forEach(function (expr2) {
 		    newCandidates.push(new BinaryOp(expr, '+', expr2, expr.value + expr2.value));
 		});
+		newCandidates.push(new DotAccess(expr, 'length'));
 		// TODO: Do something for string methods: console.log(Object.getOwnPropertyNames(String.prototype));
 	    } else if (_.isFunction(expr.value)) {
 		// Functions: call
@@ -296,7 +297,7 @@ var CodeHint = function() {
      * if we should compute it.
      */
     function BracketAccess(obj, prop, value) {
-	Expression.call(this, obj.str + '[' + prop.str + ']', value ? value : bindIfFunction(obj.value[prop.value], obj), Math.max(obj.depth, prop.depth) + 1, obj.value[prop.value]);
+	Expression.call(this, parenIfNeeded(obj) + '[' + prop.str + ']', value ? value : bindIfFunction(obj.value[prop.value], obj), Math.max(obj.depth, prop.depth) + 1, obj.value[prop.value]);
 	this.obj = obj;
 	this.prop = prop;
     }
@@ -310,7 +311,7 @@ var CodeHint = function() {
      * if we should compute it.
      */
     function DotAccess(obj, prop, value) {
-	Expression.call(this, obj.str + '.' + prop, value ? value : bindIfFunction(obj.value[prop], obj), obj.depth + 1, obj.value[prop]);
+	Expression.call(this, parenIfNeeded(obj) + '.' + prop, value ? value : bindIfFunction(obj.value[prop], obj), obj.depth + 1, obj.value[prop]);
 	this.obj = obj;
 	this.prop = prop;
     }
