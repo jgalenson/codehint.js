@@ -10,7 +10,7 @@ var CodeHint = function() {
     if (isNodeJS())
 	_ = require('./underscore-min');
 
-    var equivalences = Object.create(null);
+    var equivalences;
 
     /**
      * Synthesizes expressions built out of the given seeds that
@@ -23,6 +23,7 @@ var CodeHint = function() {
      * seeds that satisfy the spec (if given).
      */
     var synthesize = function(seeds, spec) {
+	equivalences = Object.create(null);  // Clear equivalences from previous runs.
 	// Convert the seeds object into an array of expressions.
 	candidates = []
 	for (x in seeds)
