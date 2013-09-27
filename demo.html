@@ -32,7 +32,11 @@ var a = [1, 2, 3];
 
 var spec = function (rv) { return typeof rv == 'number'; };
 
-CodeHint.synthesize({two: two, s: s, person: person, a: a, plus: plus, n: null, u: undefined}, spec);
+var startTime = (new Date()).getTime();
+var results = CodeHint.synthesize({two: two, s: s, person: person, a: a, plus: plus, n: null, u: undefined}, spec);
+var endTime = (new Date()).getTime();
+document.getElementById('output').value = 'Found ' + results.length + ' results in ' + ((endTime - startTime) / 1000) + 's.\n';
+results;
     </textarea><br/>
     Output:<br/>
     <textarea id='output' cols=120 rows=30>
@@ -45,7 +49,7 @@ CodeHint.synthesize({two: two, s: s, person: person, a: a, plus: plus, n: null, 
         var outputElem = document.getElementById('output');
         outputElem.value = '';
         result = eval(input);
-        outputElem.value = prettyPrintResult(result);//JSON.stringify(result, null, '  ');
+        outputElem.value += prettyPrintResult(result);
       }
 
       function prettyPrintResult(result) {

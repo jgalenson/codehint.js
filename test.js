@@ -12,8 +12,11 @@ function test() {
 
     var numSpec = function (rv) { return typeof rv == 'number'; };
     
+
+    var startTime = (new Date()).getTime();
     var results = CodeHint.synthesize({two: two, s: s, person: person, a: a, exp: exp, n: null, u: undefined}, numSpec);
-    console.log('Found ' + results.length + ' results.');
+    var endTime = (new Date()).getTime();
+    console.log('Found ' + results.length + ' results in ' + ((endTime - startTime) / 1000) + 's.');
 
     var resultStrs = _.map(results, function (e) { return e.str; });
     assert(resultStrs.length === _.uniq(resultStrs).length, 'Contains duplicate results');
