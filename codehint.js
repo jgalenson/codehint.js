@@ -38,7 +38,7 @@ var CodeHint = function() {
 	console.log('Generated ' + allExprs.length + ' exprs.');
 	//console.log(prettyStringOfExprs(allExprs));
 	// Filter with the spec.
-	var goodExprs = spec ? allExprs.filter(function (expr) { return spec(expr.value); }) : allExprs;
+	var goodExprs = spec ? allExprs.filter(function (expr) { try { return spec(expr.value); } catch (e) { return false; } }) : allExprs;
 	var finalExprs = expandEquivs(goodExprs);
 	console.log('Found ' + finalExprs.length + ' results.');
 	console.log(prettyStringOfExprs(finalExprs));
