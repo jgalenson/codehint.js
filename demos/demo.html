@@ -1,0 +1,93 @@
+<html>
+
+  <head>
+    <title>CodeHint.js demo</title>
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-46493232-1', 'berkeley.edu');
+  ga('send', 'pageview');
+    </script>
+  </head>
+
+  <body>
+
+    <p>
+      This is a very simple demo of <a href="https://github.com/jgalenson/codehint.js">CodeHint.js</a>.
+    </p>
+
+    Input:<br/>
+    <textarea id='input' cols=120 rows=30>
+var two = 2;
+var s = 'live';
+var plusOne = function(x) { return x + 1 };
+var person = { firstName: "John",
+               lastName: "Doe",
+               age: 42,
+               live: function(x) {
+                 if (typeof(x) == 'number') {
+                   this.age += x;
+                   return this.age;
+                 } else
+                   throw "Must give a number.";
+                 },
+               answer: function () { return 42; }
+             };
+var a = [1, 2, 3];
+
+var spec = function (rv) { return typeof rv == 'number'; };
+
+var startTime = (new Date()).getTime();
+var results = CodeHint.synthesize({two: two, s: s, person: person, a: a}, spec);
+var endTime = (new Date()).getTime();
+document.getElementById('time').innerHTML = 'Found ' + results.length + ' results in ' + ((endTime - startTime) / 1000) + 's.\n';
+results;
+    </textarea><br/><br/>
+    <input value='Solve' type='button' onclick='solve()'><br/><br/>
+    Output:<br/>
+    <span id='time'></span><br/>
+    <table class='tablesorter'>
+      <thead>
+	<tr>
+	  <th>Expression</th>
+	  <th>Value</th>
+	</tr>
+      </thead>
+      <tbody>
+	
+      </tbody>
+    </table>
+    <script src="codehint.js"></script>
+    <script src="underscore-min.js"></script>
+    <link rel="stylesheet" href="tablesorter/theme.blue.css" type="text/css" />
+    <script type="text/javascript" src="tablesorter/jquery-2.0.3.min.js"></script>
+    <script type="text/javascript" src="tablesorter/jquery.tablesorter.min.js"></script>
+    <script>
+      $("table").tablesorter(); 
+      function solve() {
+        var input = document.getElementById('input').value;
+        $("table tbody").empty();
+        result = eval(input);
+        $("table tbody").append(tableOfResult(result));
+        $("table").trigger("update"); 
+      }
+
+      function prettyPrintResult(result) {
+        return result.reduce(function (acc, expr) {
+          return acc + (acc.length == 0 ? '' : '\n') + '\'' + expr.str + '\' has value ' + expr.value;
+        }, '');
+      }
+
+      function tableOfResult(result) {
+        return result.reduce(function (acc, expr) {
+          return acc + '<tr><td>' + expr.str + '</td><td>' + expr.value + '</td></tr>';
+        }, '');
+      }
+    </script>
+    
+  </body>
+  
+</html>
